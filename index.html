@@ -1008,6 +1008,8 @@ function restartGame() {
     document.getElementById('msg').style.display = 'none';
     document.getElementById('q-text').textContent = '点击棋子开始移动...';
     document.getElementById('options').innerHTML = '';
+    document.getElementById('q-image').style.display = 'none';
+    document.getElementById('zoom-hint').style.display = 'none';
     initBoard();
     updateTurnDisplay();
     refreshBoardHighlights();
