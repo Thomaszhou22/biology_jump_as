@@ -27,6 +27,7 @@
         }
         #info-panel-header #turn-display { flex: 1; min-width: 0; }
         #question-box { border-radius: 8px; background: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 5px solid #007bff; min-height: 140px; }
+        #q-image { max-width: 100%; max-height: 300px; border-radius: 6px; margin: 8px 0; display: block; margin-left: auto; margin-right: auto; }
 
             transition: width 0.05s linear, background 0.05s linear;
             background: hsl(120, 85%, 50%);
@@ -361,6 +362,7 @@
             <div id="question-area">
                 <div id="question-box">
                     <div id="q-text">点击棋子开始移动...</div>
+                    <img id="q-image" style="display:none;" />
                     <div id="options"></div>
                 </div>
             </div>
@@ -373,9 +375,31 @@
     </div>
 
 <script>
-// --- 高迷惑性题库 ---
-// 每一题都手动设置了与其高度相似的干扰项 (Distractors)
-const deepQuestions = [];
+// --- AS Biology 题库 (图片模式) ---
+// img: true 表示 q 字段是图片路径
+// a: 正确答案, d: 干扰项数组
+// TODO: 填入真实答案和干扰项
+const deepQuestions = [
+  { q: 'q01.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q02.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q03.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q04.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q05.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q06.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q07.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q08.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q09.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q10.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q11.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q12.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q13.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q14.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q15.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q16.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q17.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q18.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+  { q: 'q19.jpg', img: true, a: 'A', d: ['B', 'C', 'D'] },
+];
 
 const WRONG_BOOK_KEY = 'organic-jump-wrong-book';
 const WRONG_BOOK_SESSION_KEY = 'organic-jump-wrong-book-session';
@@ -411,6 +435,8 @@ function addWrongQuestionRecord(playerSide) {
         player: playerNameSnapshot,
         side: playerSide,
         question: currentQuestionItem.q,
+        img: !!currentQuestionItem.img,
+        questionIndex: deepQuestions.indexOf(currentQuestionItem) + 1,
         choices: [...currentQuestionChoices],
         answer: currentQuestionItem.a,
         timestamp: Date.now()
@@ -460,7 +486,7 @@ function renderWrongBook() {
         <div class="wrong-book-meta">
           <strong>#${indexInGroup + 1}</strong>
         </div>
-        <div class="wrong-book-question"><strong>Question:</strong> ${escapeHtml(item.question)}</div>
+        <div class="wrong-book-question"><strong>Q${item.questionIndex || '?'}:</strong> ${item.img ? '<img src="questions/' + escapeHtml(item.question) + '" style="max-width:200px;border-radius:4px;">' : escapeHtml(item.question)}</div>
         <div class="wrong-book-options">
           <strong>Options:</strong>
           <ol>
@@ -736,7 +762,16 @@ function ensureQuestionLocked() {
 function renderCurrentQuestion() {
     const item = currentQuestionItem;
     if (!item) return;
-    document.getElementById('q-text').innerHTML = `<b>起跳验证：</b><br>${item.q}`;
+    document.getElementById('q-text').innerHTML = item.img
+      ? `<b>起跳验证 Q${deepQuestions.indexOf(item)+1}：</b>`
+      : `<b>起跳验证：</b><br>${item.q}`;
+    const qImg = document.getElementById('q-image');
+    if (item.img) {
+      qImg.src = 'questions/' + item.q;
+      qImg.style.display = 'block';
+    } else {
+      qImg.style.display = 'none';
+    }
     const opt = document.getElementById('options');
     opt.innerHTML = '';
     currentQuestionChoices.forEach(optText => {
