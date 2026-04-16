@@ -756,6 +756,8 @@ function clearPendingQuestionState() {
     currentQuestionItem = null;
     currentQuestionChoices = [];
     isAwaitingAnswer = false;
+    document.getElementById('q-image').style.display = 'none';
+    document.getElementById('zoom-hint').style.display = 'none';
     refreshBoardHighlights();
 }
 
