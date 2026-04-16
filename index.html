@@ -760,6 +760,7 @@ function clearPendingQuestionState() {
     currentQuestionChoices = [];
     isAwaitingAnswer = false;
     clearQuestionDisplay();
+    document.getElementById('options').innerHTML = '';
     refreshBoardHighlights();
 }
 
