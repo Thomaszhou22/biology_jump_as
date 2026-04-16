@@ -759,8 +759,7 @@ function clearPendingQuestionState() {
     currentQuestionItem = null;
     currentQuestionChoices = [];
     isAwaitingAnswer = false;
-    document.getElementById('q-image').style.display = 'none';
-    document.getElementById('zoom-hint').style.display = 'none';
+    clearQuestionDisplay();
     refreshBoardHighlights();
 }
 
@@ -776,6 +775,11 @@ function ensureQuestionLocked() {
         currentQuestionChoices = [];
         isAwaitingAnswer = true;
     }
+}
+
+function clearQuestionDisplay() {
+    document.getElementById('q-image').style.display = 'none';
+    document.getElementById('zoom-hint').style.display = 'none';
 }
 
 function renderCurrentQuestion() {
@@ -914,7 +918,7 @@ function declareWinner(playerNum) {
     const name = winnerDisplayName(playerNum);
     document.getElementById('player-label').textContent = '游戏结束：' + name + ' 获胜！';
     document.getElementById('player-label').style.color = playerNum === 1 ? '#ff4757' : '#2e86de';
-    document.getElementById('q-text').textContent = '游戏已结束。';
+    clearQuestionDisplay(); document.getElementById('q-text').textContent = '游戏已结束。';
     document.getElementById('msg').style.display = 'none';
     showResultModal(playerNum);
 }
@@ -1011,7 +1015,7 @@ function restartGame() {
     currentPlayer = 1;
     document.getElementById('end-turn-btn').style.display = 'none';
     document.getElementById('msg').style.display = 'none';
-    document.getElementById('q-text').textContent = '点击棋子开始移动...';
+    clearQuestionDisplay(); document.getElementById('q-text').textContent = '点击棋子开始移动...';
     document.getElementById('options').innerHTML = '';
     document.getElementById('q-image').style.display = 'none';
     document.getElementById('zoom-hint').style.display = 'none';
@@ -1100,7 +1104,7 @@ function execute(from, to, type) {
         selectedSlot = to;
         selectedSlot.classList.add('selected');
         document.getElementById('end-turn-btn').style.display = 'block';
-        document.getElementById('q-text').textContent = "连跳模式开启！点击落点或结束。";
+        clearQuestionDisplay(); document.getElementById('q-text').textContent = "连跳模式开启！点击落点或结束。";
         document.getElementById('options').innerHTML = '';
         refreshBoardHighlights();
     }
@@ -1130,7 +1134,7 @@ function endTurn() {
     currentPlayer = currentPlayer === 1 ? 2 : 1;
     updateTurnDisplay();
     document.getElementById('end-turn-btn').style.display = 'none';
-    document.getElementById('q-text').textContent = "请选中棋子...";
+    clearQuestionDisplay(); document.getElementById('q-text').textContent = "请选中棋子...";
     document.getElementById('options').innerHTML = '';
     document.getElementById('msg').style.display = 'none';
 }
