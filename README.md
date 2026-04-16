@@ -1,6 +1,6 @@
-# AS Organic Jump（有机反应跳棋）
+# Biology Jump（A Level IG 生物跳棋）
 
-浏览器单文件游戏：`organic jump.html`，用本地方式打开即可游玩（建议现代 Chrome / Edge / Safari）。
+浏览器单文件游戏：`index.html`，用本地方式打开即可游玩（建议现代 Chrome / Edge / Safari）。
 
 ---
 
@@ -8,7 +8,7 @@
 
 - **棋盘**：7 行六角跳棋式布局（约 37 格）。玩家 1（红）在上方两行开局，玩家 2（蓝）在下方两行开局。
 - **走子**：先选中己方棋子，再点目标格。可走**邻格**一步，或**隔子跳**到落点空位；连跳时同一枚子可连续跳，点 **「停止连跳 / 结束回合」** 后轮到对方。
-- **答题**：发起移动前会弹出随机有机题（四选一：一个正确选项 + 三个干扰项）；答对后才能落子。答错可记入错题本（见 **Wrong Question Notebook**）。管理员可开「All Answers Correct」跳过判题（仅调试用）。
+- **答题**：发起移动前会弹出随机 A Level IG 生物题（四选一：一个正确选项 + 三个干扰项）；答对后才能落子。答错可记入错题本（见 **Wrong Question Notebook**）。管理员可开「All Answers Correct」跳过判题（仅调试用）。
 - **胜利条件**：己方**全部**棋子都到达或越过**中线**即获胜。中线为最中间一行（行号 `r === 3`，最宽那一行）。**踩在中线也算过线**：
   - 红方：9 枚子全部落在 **`r ≥ 3`** 的格子；
   - 蓝方：9 枚子全部落在 **`r ≤ 3`** 的格子。
@@ -17,7 +17,9 @@
 
 ## 题库
 
-题目数据在 `organic jump.html` 内脚本常量 **`deepQuestions`** 中，每项为 `{ q, a, d }`（题干、正确答案、三个错误选项）。化学式下标等使用 Unicode（如 CH₂、K₂Cr₂O₇）。更新题库时直接编辑该数组即可。
+题目数据在 `index.html` 内脚本常量 **`deepQuestions`** 中，每项为 `{ q, a, d }`（题干、正确答案、三个错误选项）。更新题库时直接编辑该数组即可。
+
+> ⚠️ 当前仓库为**空白题库版本**，需要自行添加 A Level IG 生物相关题目。
 
 ---
 
@@ -51,51 +53,29 @@
 
 面板为全屏半透明遮罩 + 居中白色按钮区，从上到下依次为：
 
-1. **Test Random Winner**  
-   随机指定一方获胜（用于快速看结算界面等）。
-
-2. **All Answers Correct**  
-   开关：**ON** 时本题作答一律视为正确（测试用）；状态会写入 `localStorage`（`allAnswersCorrectMode`）。
-
-3. **Hints**  
-   开关：是否显示可走步/可跳位置的提示；状态会写入 `localStorage`（`showMoveHints`）。
-
-4. **Image Red Effect**  
-   - **OFF（默认）**：答题倒计时期间**不显示**题目旁的头像图，也不做「随时间变红」叠层。  
-   - **ON**：显示头像图，且倒计时推进时红色叠层逐渐加重；最后约 10 秒时「7u红温中-->」提示文字会闪烁。  
-   - 选项会持久化到 `localStorage`（键：`organic-jump-image-red-effect`）。打开面板时按钮文案会与当前设置同步。
-
-5. **Close**  
-   关闭管理员面板。
-
-> **说明**：界面右上角的 **Change Names** 仍在游戏页面上，**不在**管理员面板内。
+1. **Test Random Winner** — 随机指定一方获胜（用于快速看结算界面等）。
+2. **All Answers Correct** — 开关：**ON** 时本题作答一律视为正确（测试用）。
+3. **Hints** — 开关：是否显示可走步/可跳位置的提示。
+4. **Image Red Effect** — 答题倒计时期间头像装饰效果（默认关闭）。
+5. **Close** — 关闭管理员面板。
 
 ---
 
-### 与管理员相关的注意点
-
-- 使用 `/` 触发管理员时，**不会**把 `/` 或 `xxx/` 写入玩家昵称或 `localStorage` 中的名字。
-- 错题本、回合逻辑等与管理员**独立**；错题本通过页面上的 **Wrong Question Notebook** 打开，不是管理员入口。
-
----
-
-## 其他常用功能（简要）
+## 其他功能
 
 | 入口 | 作用 |
 |------|------|
-| **Wrong Question Notebook** | 查看本会话内答错的题目（按玩家名分组）；**Clean all** 会二次确认后清空；数据与「浏览器会话」策略见页面内实现。 |
-| **Change Names** | 打开改名弹窗，与管理员触发方式共用同一组输入框。 |
+| **Wrong Question Notebook** | 查看本会话内答错的题目；**Clean all** 会二次确认后清空 |
+| **Change Names** | 打开改名弹窗 |
 
 ---
 
 ## 资源文件
 
-- `question-visual.png`：与 `organic jump.html` 同目录，作为答题时头像装饰图（需在管理员中开启 **Image Red Effect** 才显示）。
+- `question-visual.png`：答题时头像装饰图（需在管理员中开启 **Image Red Effect** 才显示）。
 
 ---
 
 ## 许可与修改
 
-本地修改游戏时，请直接编辑 `organic jump.html`；管理员相关逻辑集中在文件内脚本与 `#admin-overlay` / `#admin-panel` 结构中。
-
-若想兼顾游戏体验与有机复习，请尽量少用 **Test Random Winner** 与 **All Answers Correct**。
+直接编辑 `index.html` 即可修改游戏逻辑或题库。
