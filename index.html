@@ -35,8 +35,9 @@
 
             border-radius: 10px;
         }
-        .option-btn { width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; text-align: left; transition: 0.2s; font-size: 13.5px; }
+        .option-btn { width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; text-align: center; transition: 0.2s; font-size: 15px; font-weight: bold; }
         .option-btn:hover:not(:disabled) { background: #eef2f7; border-color: #007bff; }
+        .options-row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
         .status-msg { font-weight: bold; text-align: center; padding: 10px; border-radius: 6px; margin-top: 10px; display: none; }
         .correct { background: #d4edda; color: #155724; }
         .incorrect { background: #f8d7da; color: #721c24; }
@@ -426,7 +427,7 @@ function saveWrongBook(records) {
 }
 
 function addWrongQuestionRecord(playerSide) {
-    if (!currentQuestionItem || !Array.isArray(currentQuestionChoices) || !currentQuestionChoices.length) return;
+    if (!currentQuestionItem) return;
 
     const playerNameSnapshot = playerSide === 'red' ? String(player1Name || '') : String(player2Name || '');
 
@@ -437,7 +438,6 @@ function addWrongQuestionRecord(playerSide) {
         question: currentQuestionItem.q,
         img: !!currentQuestionItem.img,
         questionIndex: deepQuestions.indexOf(currentQuestionItem) + 1,
-        choices: [...currentQuestionChoices],
         answer: currentQuestionItem.a,
         timestamp: Date.now()
     });
@@ -488,10 +488,7 @@ function renderWrongBook() {
         </div>
         <div class="wrong-book-question"><strong>Q${item.questionIndex || '?'}:</strong> ${item.img ? '<img src="questions/' + escapeHtml(item.question) + '" style="max-width:200px;border-radius:4px;">' : escapeHtml(item.question)}</div>
         <div class="wrong-book-options">
-          <strong>Options:</strong>
-          <ol>
-            ${item.choices.map(choice => `<li>${escapeHtml(choice)}</li>`).join('')}
-          </ol>
+          <strong>Answer:</strong> ${escapeHtml(item.answer)}
         </div>
         <div class="wrong-book-answer"><strong>Correct Answer:</strong> ${escapeHtml(item.answer)}</div>
       </div>
@@ -754,7 +751,7 @@ function ensureQuestionLocked() {
         if (recentQuestionIndices.length > RECENT_QUESTION_WINDOW) {
             recentQuestionIndices.shift();
         }
-        currentQuestionChoices = [currentQuestionItem.a, ...currentQuestionItem.d].sort(() => 0.5 - Math.random());
+        currentQuestionChoices = [];
         isAwaitingAnswer = true;
     }
 }
@@ -774,14 +771,16 @@ function renderCurrentQuestion() {
     }
     const opt = document.getElementById('options');
     opt.innerHTML = '';
-    currentQuestionChoices.forEach(optText => {
+    const row = document.createElement('div');
+    row.className = 'options-row';
+    ['A', 'B', 'C', 'D'].forEach(letter => {
         const btn = document.createElement('button');
         btn.className = 'option-btn';
-        btn.textContent = optText;
+        btn.textContent = letter;
         btn.onclick = () => {
             if (turnLocked || gameOver) return;
             const qItem = currentQuestionItem;
-            const correct = testAllAnswersCorrect ? true : (optText === qItem.a);
+            const correct = testAllAnswersCorrect ? true : (letter === qItem.a);
             recordAnswer(correct);
             if (correct) {
                 const from = pendingMoveFrom;
