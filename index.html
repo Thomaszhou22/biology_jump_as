@@ -55,6 +55,11 @@
         #admin-panel #toggle-answer-test-btn.is-on { background: #e8f5e9; border-color: #43a047; color: #1b5e20; }
         #finish-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 3000; }
         #finish-modal { background: #fff; border-radius: 16px; padding: 28px 32px; max-width: 400px; width: 90%; text-align: center; box-shadow: 0 16px 48px rgba(0,0,0,0.22); }
+        #preload-overlay { position: fixed; inset: 0; background: rgba(255,255,255,0.92); z-index: 5000; display: none; align-items: center; justify-content: center; flex-direction: column; gap: 12px; }
+        #preload-overlay .preload-text { font-size: 16px; color: #333; font-weight: bold; }
+        #preload-overlay .preload-bar-wrap { width: min(360px, 80vw); background: #e9ecef; border-radius: 10px; overflow: hidden; height: 12px; }
+        #preload-overlay .preload-bar-fill { height: 100%; background: #007bff; border-radius: 10px; transition: width 0.15s; width: 0%; }
+        #preload-overlay .preload-detail { font-size: 13px; color: #888; }
         #finish-modal h2 { margin: 0 0 16px; }
         #finish-stats { display: flex; flex-direction: column; gap: 8px; margin-bottom: 20px; font-size: 15px; color: #444; }
     </style>
@@ -93,6 +98,8 @@
             <button type="button" class="btn-action" id="finish-restart-btn">重新开始</button>
         </div>
     </div>
+
+    <div id="preload-overlay"><div class="preload-text">正在加载题目图片...</div><div class="preload-bar-wrap"><div class="preload-bar-fill" id="preload-bar-fill"></div></div><div class="preload-detail" id="preload-detail">已加载 0/0</div></div>
 
     <div id="quiz-container">
         <div id="progress-bar"><div id="progress-fill"></div></div>
@@ -282,7 +289,7 @@ function shuffleArray(arr) {
 function startQuiz(fromProgress) {
     hideFinishOverlay();
     document.getElementById('start-btn').style.display = 'none';
-    document.getElementById('abort-btn').style.display = 'block';
+    document.getElementById('abort-btn').style.display = 'none';
     document.getElementById('restart-btn').style.display = 'none';
     document.getElementById('progress-bar').style.display = 'block';
     document.getElementById('score-display').style.display = 'flex';
@@ -293,8 +300,33 @@ function startQuiz(fromProgress) {
         totalCorrect = 0;
         totalWrong = 0;
     }
-    updateScoreDisplay();
-    showNextQuestion();
+    preloadImages(() => {
+        document.getElementById('abort-btn').style.display = 'block';
+        updateScoreDisplay();
+        showNextQuestion();
+    });
+}
+
+function preloadImages(onDone) {
+    const imgQuestions = shuffledQuestions.filter(q => q.img);
+    const total = imgQuestions.length;
+    if (total === 0) { onDone(); return; }
+    let loaded = 0;
+    const overlay = document.getElementById('preload-overlay');
+    const barFill = document.getElementById('preload-bar-fill');
+    const detail = document.getElementById('preload-detail');
+    overlay.style.display = 'flex';
+    function updateProgress() {
+        const pct = Math.round((loaded / total) * 100);
+        barFill.style.width = pct + '%';
+        detail.textContent = '已加载 ' + loaded + '/' + total;
+    }
+    updateProgress();
+    imgQuestions.forEach(q => {
+        const img = new Image();
+        img.onload = img.onerror = () => { loaded++; updateProgress(); if (loaded >= total) { overlay.style.display = 'none'; onDone(); } };
+        img.src = 'questions/' + q.q;
+    });
 }
 
 function showNextQuestion() {
