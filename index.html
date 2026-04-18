@@ -468,7 +468,6 @@ function renderCurrentQuestion() {
                 showMsg(`❌ 错误！正确答案是: ${qItem.a}`, 'incorrect');
             }
             isAnswering = false;
-            saveQuizProgress();
             document.getElementById('next-btn').style.display = 'block';
         };
         row.appendChild(btn);
@@ -481,6 +480,7 @@ function handleNext() {
     updatePlayerDisplay();
     updateStatsBar();
     loadNextQuestion();
+    saveQuizProgress();
 }
 
 function resetStats() { player1Answered = 0; player1Wrong = 0; player2Answered = 0; player2Wrong = 0; }
