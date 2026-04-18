@@ -1,0 +1,654 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <title>AS 生物答题</title>
+    <style>
+        body { font-family: 'PingFang SC', sans-serif; display: flex; flex-direction: column; align-items: center; background: #f0f2f5; margin: 0; padding: 20px; }
+        #quiz-container { width: 480px; max-width: 95vw; background: white; padding: 25px; border-radius: 15px; box-shadow: 0 10px 25px rgba(0,0,0,0.1); margin-top: 10px; }
+        #header-bar {
+            display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px;
+        }
+        #player-display { font-size: 18px; font-weight: bold; }
+        #question-box { border-radius: 8px; background: #f8f9fa; padding: 15px; margin: 15px 0; border-left: 5px solid #007bff; min-height: 140px; }
+        #q-text { margin-bottom: 8px; }
+        #q-image { max-width: 100%; max-height: 300px; border-radius: 6px; margin: 8px 0; display: block; margin-left: auto; margin-right: auto; cursor: zoom-in; transition: opacity 0.2s; }
+        #q-image:hover { opacity: 0.85; box-shadow: 0 0 0 3px rgba(0,123,255,0.5); }
+        .zoom-hint { text-align: center; margin-top: 4px; }
+        .zoom-btn { display: block; margin: 6px auto 0; padding: 6px 16px; border: 1px solid #ccc; border-radius: 6px; background: #f0f0f0; font-size: 13px; cursor: pointer; color: #555; }
+        .zoom-btn:hover { background: #e0e0e0; }
+        .image-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; cursor: zoom-out; }
+        .image-overlay img { max-width: 95vw; max-height: 95vh; border-radius: 8px; box-shadow: 0 4px 24px rgba(0,0,0,0.5); }
+        .option-btn { width: 100%; padding: 12px; margin: 6px 0; border: 1px solid #ddd; border-radius: 6px; background: #fff; cursor: pointer; text-align: center; transition: 0.2s; font-size: 15px; font-weight: bold; }
+        .option-btn:hover:not(:disabled) { background: #eef2f7; border-color: #007bff; }
+        .options-row { display: flex; gap: 8px; justify-content: center; margin-top: 8px; }
+        .status-msg { font-weight: bold; text-align: center; padding: 10px; border-radius: 6px; margin-top: 10px; display: none; }
+        .correct { background: #d4edda; color: #155724; }
+        .incorrect { background: #f8d7da; color: #721c24; }
+        .stats-bar { display: flex; gap: 16px; justify-content: center; margin-top: 16px; font-size: 14px; color: #555; }
+        .stats-bar span { background: #f0f2f5; padding: 4px 12px; border-radius: 20px; }
+        .btn-action { width: 100%; padding: 12px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; font-size: 15px; background: #2f3542; color: white; margin-top: 16px; }
+        .btn-action:hover { background: #1e2229; }
+        #change-names-btn {
+            position: fixed; right: 15px; top: 15px; z-index: 1000; padding: 8px 14px; border-radius: 8px; border: 1px solid #d1d8e0; background: #fff; color: #333; font-size: 13px; font-family: inherit; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.12); transition: background 0.2s, transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+        }
+        #change-names-btn:hover { background: #eef2f7; transform: scale(1.05); box-shadow: 0 3px 12px rgba(0,0,0,0.15); }
+        #name-modal { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: flex; align-items: center; justify-content: center; z-index: 2000; }
+        #name-modal .modal-box { background: #fff; padding: 28px 32px; border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.18); min-width: 320px; max-width: 90vw; }
+        #name-modal .modal-box h2 { margin: 0 0 18px; font-size: 1.25rem; text-align: center; }
+        #name-modal .modal-field { margin-bottom: 14px; }
+        #name-modal .modal-field label { display: block; font-size: 13px; color: #555; margin-bottom: 6px; }
+        #name-modal .modal-field input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid #d1d8e0; border-radius: 8px; font-size: 15px; font-family: inherit; }
+        #name-modal .modal-field input:focus { outline: none; border-color: #007bff; }
+        #name-modal #start-game-btn { width: 100%; margin-top: 8px; padding: 12px; border: none; border-radius: 8px; background: #2f3542; color: #fff; font-weight: bold; font-size: 15px; cursor: pointer; }
+        #name-modal #start-game-btn:hover { background: #1e2229; }
+        #name-modal-warning { font-size: 13px; color: #c0392b; margin-top: 10px; min-height: 1.2em; text-align: center; }
+        #wrong-book-btn {
+            position: fixed; right: 15px; top: 52px; z-index: 1000; padding: 8px 14px; border-radius: 8px; border: 1px solid #d1d8e0; background: #fff; color: #333; font-size: 13px; font-family: inherit; font-weight: bold; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.12); transition: background 0.2s, transform 0.2s, box-shadow 0.2s, border-color 0.2s; max-width: calc(100vw - 30px);
+        }
+        #wrong-book-btn:hover { background: #eef2f7; transform: scale(1.05); box-shadow: 0 3px 12px rgba(0,0,0,0.15); }
+        #wrong-book-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 3500; padding: 20px; box-sizing: border-box; }
+        #wrong-book-panel { background: #fff; border-radius: 16px; padding: 20px; width: min(900px, 92vw); max-height: 85vh; overflow: auto; box-shadow: 0 12px 40px rgba(0,0,0,0.35); }
+        #wrong-book-panel h2 { margin: 0 0 16px; font-size: 1.25rem; text-align: center; }
+        #wrong-book-list { margin-bottom: 16px; }
+        .wrong-book-section { margin-bottom: 22px; }
+        .wrong-book-section:last-child { margin-bottom: 0; }
+        .wrong-book-section-title { font-size: 1.05rem; font-weight: bold; color: #2f3542; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 2px solid #e0e6ed; text-align: left; }
+        .wrong-book-count { font-weight: normal; color: #666; font-size: 0.9rem; margin-left: 6px; }
+        .wrong-book-item { border: 1px solid #ddd; border-radius: 12px; padding: 14px; margin-bottom: 14px; text-align: left; }
+        .wrong-book-section-items .wrong-book-item:last-child { margin-bottom: 0; }
+        .wrong-book-meta { display: flex; flex-wrap: wrap; gap: 12px; align-items: baseline; margin-bottom: 10px; font-size: 0.95rem; }
+        .wrong-book-item .wrong-book-meta strong { margin-right: 6px; }
+        .wrong-book-question { margin-bottom: 10px; }
+        .wrong-book-options { margin-bottom: 10px; }
+        .wrong-book-options ol { margin: 6px 0 0; padding-left: 1.4em; }
+        .wrong-book-answer { font-size: 0.95rem; }
+        .wrong-book-footer-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .wrong-book-footer-actions button { flex: 1; min-width: 120px; padding: 10px 14px; border-radius: 8px; border: 1px solid #d1d8e0; background: #f8f9fa; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; }
+        .wrong-book-footer-actions button:hover { background: #eef2f7; }
+        #wrong-book-clear-all { border-color: #e8b4b4; background: #fff5f5; color: #a61e1e; }
+        #wrong-book-clear-all:hover { background: #ffe8e8; border-color: #d64545; }
+        #admin-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.8); display: none; align-items: center; justify-content: center; z-index: 4000; padding: 20px; box-sizing: border-box; }
+        #admin-panel { background: #fff; border-radius: 14px; padding: 24px 28px; max-width: 360px; width: 100%; box-shadow: 0 12px 40px rgba(0,0,0,0.35); display: flex; flex-direction: column; gap: 8px; }
+        #admin-panel button { display: block; width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid #d1d8e0; background: #f8f9fa; font-family: inherit; font-size: 14px; font-weight: bold; cursor: pointer; }
+        #admin-panel button:hover { background: #eef2f7; }
+        #admin-panel #toggle-answer-test-btn.is-on { background: #e8f5e9; border-color: #43a047; color: #1b5e20; }
+        #admin-panel #toggle-answer-test-btn.is-on:hover { background: #c8e6c9; border-color: #2e7d32; }
+        #result-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 3000; padding: 20px; box-sizing: border-box; }
+        #result-modal { background: #fff; border-radius: 16px; padding: 28px 32px; max-width: 420px; width: 100%; box-shadow: 0 16px 48px rgba(0,0,0,0.22); }
+        #result-modal h2 { margin: 0 0 12px; font-size: 1.4rem; text-align: center; }
+        .result-winner-line { font-size: 1.15rem; font-weight: bold; text-align: center; margin: 0 0 20px; color: #2f3542; }
+        .result-stats-grid { display: flex; flex-direction: column; gap: 16px; margin-bottom: 22px; }
+        .player-card { background: #f8f9fa; border-radius: 10px; padding: 12px 16px; }
+        .player1-card { border-left: 6px solid #ff4d6d; box-shadow: 0 1px 8px rgba(255, 77, 109, 0.12); }
+        .player2-card { border-left: 6px solid #4a90e2; box-shadow: 0 1px 8px rgba(74, 144, 226, 0.12); }
+        .player-card h3 { margin: 0 0 8px; font-size: 0.95rem; font-weight: bold; }
+        .player1-card h3 { color: #ff4757; }
+        .player2-card h3 { color: #2e86de; }
+        .player-card ul { margin: 0; padding-left: 18px; color: #444; font-size: 0.9rem; line-height: 1.6; }
+        .result-acc { list-style: none; margin-left: -18px; padding-left: 0; color: #666; font-size: 0.85rem; margin-top: 4px; }
+        #result-restart-btn { width: 100%; padding: 12px; border: none; border-radius: 8px; background: #2f3542; color: #fff; font-weight: bold; font-size: 15px; cursor: pointer; }
+        #result-restart-btn:hover { background: #1e2229; }
+    </style>
+</head>
+<body>
+
+    <button type="button" id="change-names-btn">Change Names</button>
+    <button type="button" id="wrong-book-btn">Wrong Question Notebook</button>
+
+    <div id="wrong-book-overlay" role="dialog" aria-modal="true" aria-labelledby="wrong-book-title" aria-hidden="true">
+        <div id="wrong-book-panel">
+            <h2 id="wrong-book-title">Wrong Question Notebook</h2>
+            <div id="wrong-book-list"></div>
+            <div class="wrong-book-footer-actions">
+                <button type="button" id="wrong-book-clear-all">Clean all</button>
+                <button type="button" id="wrong-book-close">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="name-modal" role="dialog" aria-modal="true" aria-labelledby="name-modal-title">
+        <div class="modal-box">
+            <h2 id="name-modal-title">输入玩家名称</h2>
+            <div class="modal-field">
+                <label for="red-name-input">玩家 1（红）</label>
+                <input id="red-name-input" type="text" maxlength="40" autocomplete="off" placeholder="例如：Alice">
+            </div>
+            <div class="modal-field">
+                <label for="blue-name-input">玩家 2（蓝）</label>
+                <input id="blue-name-input" type="text" maxlength="40" autocomplete="off" placeholder="例如：Bob">
+            </div>
+            <div id="name-modal-warning"></div>
+            <button type="button" id="start-game-btn">Start Game</button>
+        </div>
+    </div>
+
+    <div id="result-overlay" role="dialog" aria-modal="true" aria-labelledby="result-title" aria-hidden="true">
+        <div id="result-modal">
+            <h2 id="result-title">游戏结算</h2>
+            <p id="winner-name" class="result-winner-line"></p>
+            <div class="result-stats-grid">
+                <div class="player-card player1-card">
+                    <h3 id="result-p1-name"></h3>
+                    <ul>
+                        <li>作答：<span id="p1-answered">0</span></li>
+                        <li>错误：<span id="p1-wrong">0</span></li>
+                        <li id="p1-acc-line" class="result-acc">正确率：—</li>
+                    </ul>
+                </div>
+                <div class="player-card player2-card">
+                    <h3 id="result-p2-name"></h3>
+                    <ul>
+                        <li>作答：<span id="p2-answered">0</span></li>
+                        <li>错误：<span id="p2-wrong">0</span></li>
+                        <li id="p2-acc-line" class="result-acc">正确率：—</li>
+                    </ul>
+                </div>
+            </div>
+            <button type="button" id="result-restart-btn">重新开始游戏</button>
+        </div>
+    </div>
+
+    <div id="admin-overlay" role="dialog" aria-modal="true" aria-label="Admin" aria-hidden="true">
+        <div id="admin-panel">
+            <button type="button" id="toggle-answer-test-btn">All Answers Correct: OFF</button>
+            <button type="button" id="admin-close">Close</button>
+        </div>
+    </div>
+
+    <h1>🧬 AS Biology Quiz</h1>
+
+    <div id="quiz-container">
+        <div id="header-bar">
+            <div id="player-display" style="color:#ff4757">—</div>
+        </div>
+        <div id="question-box">
+            <div id="q-text">等待开始...</div>
+            <img id="q-image" style="display:none;" onclick="zoomImage(this.src)" />
+            <div id="zoom-hint" class="zoom-hint" style="display:none;"><button class="zoom-btn" onclick="zoomImage(document.getElementById('q-image').src)">放大图片</button></div>
+            <div id="options"></div>
+        </div>
+        <div id="msg" class="status-msg"></div>
+        <div class="stats-bar">
+            <span id="stats-answered">作答: 0</span>
+            <span id="stats-correct">正确: 0</span>
+            <span id="stats-wrong">错误: 0</span>
+        </div>
+        <button type="button" id="next-btn" class="btn-action" style="display:none;">下一题</button>
+        <button type="button" id="end-quiz-btn" class="btn-action" style="display:none;background:#c0392b;">终止答题</button>
+        <button type="button" id="restart-btn" class="btn-action" style="background:none;border:1px solid #d1d8e0;color:#999;font-size:12px;margin-top:60px;">重新开始游戏</button>
+    </div>
+
+<script>
+// --- AS Biology 题库 (图片模式) ---
+const deepQuestions = [
+  { q: 'q01.jpg', img: true, a: 'D' },
+  { q: 'q02.jpg', img: true, a: 'C' },
+  { q: 'q03.jpg', img: true, a: 'A' },
+  { q: 'q04.jpg', img: true, a: 'C' },
+  { q: 'q05.jpg', img: true, a: 'D' },
+  { q: 'q06.jpg', img: true, a: 'C' },
+  { q: 'q07.jpg', img: true, a: 'C' },
+  { q: 'q08.jpg', img: true, a: 'A' },
+  { q: 'q09.jpg', img: true, a: 'C' },
+  { q: 'q10.jpg', img: true, a: 'D' },
+  { q: 'q11.jpg', img: true, a: 'A' },
+  { q: 'q12.jpg', img: true, a: 'B' },
+  { q: 'q13.jpg', img: true, a: 'B' },
+  { q: 'q14.jpg', img: true, a: 'C' },
+  { q: 'q15.jpg', img: true, a: 'A' },
+  { q: 'q16.jpg', img: true, a: 'D' },
+  { q: 'q17.jpg', img: true, a: 'B' },
+  { q: 'q18.jpg', img: true, a: 'B' },
+  { q: 'q19.jpg', img: true, a: 'C' },
+  { q: 'q20.jpg', img: true, a: 'B' },
+  { q: 'q21.jpg', img: true, a: 'A' },
+  { q: 'q22.jpg', img: true, a: 'D' },
+  { q: 'q23.jpg', img: true, a: 'B' },
+  { q: 'q24.jpg', img: true, a: 'D' },
+  { q: 'q25.jpg', img: true, a: 'D' },
+  { q: 'q26.jpg', img: true, a: 'B' },
+  { q: 'q27.jpg', img: true, a: 'A' },
+  { q: 'q28.jpg', img: true, a: 'D' },
+  { q: 'q29.jpg', img: true, a: 'D' },
+  { q: 'q30.jpg', img: true, a: 'B' },
+  { q: 'q31.jpg', img: true, a: 'C' },
+  { q: 'q32.jpg', img: true, a: 'C' },
+  { q: 'q33.jpg', img: true, a: 'B' },
+  { q: 'q34.jpg', img: true, a: 'C' },
+  { q: 'q35.jpg', img: true, a: 'D' },
+  { q: 'q36.jpg', img: true, a: 'A' },
+  { q: 'q37.jpg', img: true, a: 'C' },
+  { q: 'q38.jpg', img: true, a: 'C' },
+  { q: 'q39.jpg', img: true, a: 'D' },
+  { q: 'q40.jpg', img: true, a: 'D' },
+  { q: 'q41.jpg', img: true, a: 'C' },
+  { q: 'q42.jpg', img: true, a: 'A' },
+  { q: 'q43.jpg', img: true, a: 'D' },
+  { q: 'q44.jpg', img: true, a: 'D' },
+  { q: 'q45.jpg', img: true, a: 'C' },
+  { q: 'q46.jpg', img: true, a: 'C' },
+  { q: 'q47.jpg', img: true, a: 'A' },
+  { q: 'q48.jpg', img: true, a: 'B' },
+  { q: 'q49.jpg', img: true, a: 'A' },
+  { q: 'q50.jpg', img: true, a: 'B' },
+  { q: 'q51.jpg', img: true, a: 'B' },
+  { q: 'q52.jpg', img: true, a: 'A' },
+  { q: 'q53.jpg', img: true, a: 'C' },
+  { q: 'q54.jpg', img: true, a: 'A' },
+  { q: 'q55.jpg', img: true, a: 'A' },
+  { q: 'q56.jpg', img: true, a: 'C' },
+  { q: 'q57.jpg', img: true, a: 'C' },
+  { q: 'q58.jpg', img: true, a: 'C' },
+  { q: 'q59.jpg', img: true, a: 'C' },
+  { q: 'q60.jpg', img: true, a: 'B' },
+  { q: 'q61.jpg', img: true, a: 'B' },
+  { q: 'q62.jpg', img: true, a: 'D' },
+  { q: 'q63.jpg', img: true, a: 'B' },
+  { q: 'q64.jpg', img: true, a: 'C' },
+  { q: 'q65.jpg', img: true, a: 'B' },
+  { q: 'q66.jpg', img: true, a: 'C' },
+  { q: 'q67.jpg', img: true, a: 'B' },
+  { q: 'q68.jpg', img: true, a: 'C' },
+  { q: 'q69.jpg', img: true, a: 'C' },
+  { q: 'q70.jpg', img: true, a: 'D' },
+  { q: 'q71.jpg', img: true, a: 'B' },
+  { q: 'q72.jpg', img: true, a: 'C' },
+  { q: 'q73.jpg', img: true, a: 'B' },
+  { q: 'q74.jpg', img: true, a: 'D' },
+  { q: 'q75.jpg', img: true, a: 'A' },
+  { q: 'q76.jpg', img: true, a: 'C' },
+  { q: 'q77.jpg', img: true, a: 'D' },
+  { q: 'q78.jpg', img: true, a: 'B' },
+  { q: 'q79.jpg', img: true, a: 'A' },
+  { q: 'q80.jpg', img: true, a: 'D' },
+  { q: 'q81.jpg', img: true, a: 'A' },
+  { q: 'q82.jpg', img: true, a: 'C' },
+  { q: 'q83.jpg', img: true, a: 'A' },
+  { q: 'q84.jpg', img: true, a: 'D' },
+  { q: 'q85.jpg', img: true, a: 'C' },
+  { q: 'q86.jpg', img: true, a: 'D' },
+  { q: 'q87.jpg', img: true, a: 'C' }, { q: 'q88.jpg', img: true, a: 'D' }, { q: 'q89.jpg', img: true, a: 'C' }, { q: 'q90.jpg', img: true, a: 'C' }, { q: 'q91.jpg', img: true, a: 'D' }, { q: 'q92.jpg', img: true, a: 'C' }, { q: 'q93.jpg', img: true, a: 'C' }, { q: 'q94.jpg', img: true, a: 'C' }, { q: 'q95.jpg', img: true, a: 'B' }, { q: 'q96.jpg', img: true, a: 'B' }, { q: 'q97.jpg', img: true, a: 'D' }, { q: 'q98.jpg', img: true, a: 'A' }, { q: 'q99.jpg', img: true, a: 'A' }, { q: 'q100.jpg', img: true, a: 'C' }, { q: 'q101.jpg', img: true, a: 'A' }, { q: 'q102.jpg', img: true, a: 'D' }, { q: 'q103.jpg', img: true, a: 'B' }, { q: 'q104.jpg', img: true, a: 'D' }, { q: 'q105.jpg', img: true, a: 'C' }, { q: 'q106.jpg', img: true, a: 'B' }, { q: 'q107.jpg', img: true, a: 'B' }, { q: 'q108.jpg', img: true, a: 'C' }, { q: 'q109.jpg', img: true, a: 'B' }, { q: 'q110.jpg', img: true, a: 'D' }, { q: 'q111.jpg', img: true, a: 'D' }, { q: 'q112.jpg', img: true, a: 'C' }, { q: 'q113.jpg', img: true, a: 'B' },
+  { q: 'q114.jpg', img: true, a: 'D' }, { q: 'q115.jpg', img: true, a: 'B' }, { q: 'q116.jpg', img: true, a: 'C' }, { q: 'q117.jpg', img: true, a: 'D' }, { q: 'q118.jpg', img: true, a: 'C' }, { q: 'q119.jpg', img: true, a: 'A' }, { q: 'q120.jpg', img: true, a: 'C' }, { q: 'q121.jpg', img: true, a: 'D' }, { q: 'q122.jpg', img: true, a: 'C' }, { q: 'q123.jpg', img: true, a: 'D' }, { q: 'q124.jpg', img: true, a: 'B' }, { q: 'q125.jpg', img: true, a: 'A' }, { q: 'q126.jpg', img: true, a: 'D' }, { q: 'q127.jpg', img: true, a: 'C' }, { q: 'q128.jpg', img: true, a: 'B' }, { q: 'q129.jpg', img: true, a: 'C' },
+  { q: 'q130.jpg', img: true, a: 'D' }, { q: 'q131.jpg', img: true, a: 'C' }, { q: 'q132.jpg', img: true, a: 'C' }, { q: 'q133.jpg', img: true, a: 'A' }, { q: 'q134.jpg', img: true, a: 'A' }, { q: 'q135.jpg', img: true, a: 'B' }, { q: 'q136.jpg', img: true, a: 'C' }, { q: 'q137.jpg', img: true, a: 'C' }, { q: 'q138.jpg', img: true, a: 'B' }, { q: 'q139.jpg', img: true, a: 'D' }, { q: 'q140.jpg', img: true, a: 'C' }, { q: 'q141.jpg', img: true, a: 'A' }, { q: 'q142.jpg', img: true, a: 'D' }, { q: 'q143.jpg', img: true, a: 'D' }, { q: 'q144.jpg', img: true, a: 'A' }, { q: 'q145.jpg', img: true, a: 'C' }, { q: 'q146.jpg', img: true, a: 'B' }, { q: 'q147.jpg', img: true, a: 'D' }, { q: 'q148.jpg', img: true, a: 'C' }, { q: 'q149.jpg', img: true, a: 'B' }, { q: 'q150.jpg', img: true, a: 'D' }, { q: 'q151.jpg', img: true, a: 'B' }, { q: 'q152.jpg', img: true, a: 'C' }, { q: 'q153.jpg', img: true, a: 'B' }, { q: 'q154.jpg', img: true, a: 'A' }, { q: 'q155.jpg', img: true, a: 'D' }, { q: 'q156.jpg', img: true, a: 'C' }, { q: 'q157.jpg', img: true, a: 'D' }, { q: 'q158.jpg', img: true, a: 'B' }, { q: 'q159.jpg', img: true, a: 'B' }, { q: 'q160.jpg', img: true, a: 'A' },
+  { q: 'q161.jpg', img: true, a: 'A' }, { q: 'q162.jpg', img: true, a: 'D' }, { q: 'q163.jpg', img: true, a: 'D' }, { q: 'q164.jpg', img: true, a: 'B' }, { q: 'q165.jpg', img: true, a: 'A' }, { q: 'q166.jpg', img: true, a: 'D' }, { q: 'q167.jpg', img: true, a: 'C' }, { q: 'q168.jpg', img: true, a: 'A' }, { q: 'q169.jpg', img: true, a: 'B' }, { q: 'q170.jpg', img: true, a: 'B' }, { q: 'q171.jpg', img: true, a: 'B' }, { q: 'q172.jpg', img: true, a: 'A' }, { q: 'q173.jpg', img: true, a: 'A' }, { q: 'q174.jpg', img: true, a: 'B' }, { q: 'q175.jpg', img: true, a: 'D' }, { q: 'q176.jpg', img: true, a: 'B' }, { q: 'q177.jpg', img: true, a: 'D' }, { q: 'q178.jpg', img: true, a: 'C' }, { q: 'q179.jpg', img: true, a: 'C' }, { q: 'q180.jpg', img: true, a: 'C' },
+  { q: 'q181.jpg', img: true, a: 'D' }, { q: 'q182.jpg', img: true, a: 'D' }, { q: 'q183.jpg', img: true, a: 'B' }, { q: 'q184.jpg', img: true, a: 'D' }, { q: 'q185.jpg', img: true, a: 'D' }, { q: 'q186.jpg', img: true, a: 'D' }, { q: 'q187.jpg', img: true, a: 'C' }, { q: 'q188.jpg', img: true, a: 'D' }, { q: 'q189.jpg', img: true, a: 'D' }, { q: 'q190.jpg', img: true, a: 'D' }, { q: 'q191.jpg', img: true, a: 'C' }, { q: 'q192.jpg', img: true, a: 'D' }, { q: 'q193.jpg', img: true, a: 'D' }, { q: 'q194.jpg', img: true, a: 'D' }, { q: 'q195.jpg', img: true, a: 'D' },
+  { q: 'q196.jpg', img: true, a: 'D' }, { q: 'q197.jpg', img: true, a: 'C' }, { q: 'q198.jpg', img: true, a: 'B' }, { q: 'q199.jpg', img: true, a: 'A' }, { q: 'q200.jpg', img: true, a: 'A' }, { q: 'q201.jpg', img: true, a: 'D' }, { q: 'q202.jpg', img: true, a: 'B' }, { q: 'q203.jpg', img: true, a: 'C' }, { q: 'q204.jpg', img: true, a: 'A' }, { q: 'q205.jpg', img: true, a: 'D' }, { q: 'q206.jpg', img: true, a: 'C' }, { q: 'q207.jpg', img: true, a: 'B' }, { q: 'q208.jpg', img: true, a: 'C' }, { q: 'q209.jpg', img: true, a: 'B' }, { q: 'q210.jpg', img: true, a: 'A' }, { q: 'q211.jpg', img: true, a: 'C' }, { q: 'q212.jpg', img: true, a: 'B' }, { q: 'q213.jpg', img: true, a: 'B' }, { q: 'q214.jpg', img: true, a: 'C' }, { q: 'q215.jpg', img: true, a: 'B' }, { q: 'q216.jpg', img: true, a: 'B' }, { q: 'q217.jpg', img: true, a: 'C' }, { q: 'q218.jpg', img: true, a: 'B' }, { q: 'q219.jpg', img: true, a: 'D' }, { q: 'q220.jpg', img: true, a: 'C' },
+];
+
+function zoomImage(src) {
+    const overlay = document.createElement('div');
+    overlay.className = 'image-overlay';
+    overlay.onclick = () => overlay.remove();
+    const img = document.createElement('img');
+    img.src = src;
+    overlay.appendChild(img);
+    document.body.appendChild(overlay);
+}
+
+// --- Wrong Book ---
+const WRONG_BOOK_KEY = 'organic-jump-wrong-book';
+const WRONG_BOOK_SESSION_KEY = 'organic-jump-wrong-book-session';
+
+if (!sessionStorage.getItem(WRONG_BOOK_SESSION_KEY)) {
+    try { localStorage.removeItem(WRONG_BOOK_KEY); } catch (e) {}
+    sessionStorage.setItem(WRONG_BOOK_SESSION_KEY, '1');
+}
+
+function getWrongBook() {
+    try { return JSON.parse(localStorage.getItem(WRONG_BOOK_KEY) || '[]'); } catch { return []; }
+}
+function saveWrongBook(records) {
+    try { localStorage.setItem(WRONG_BOOK_KEY, JSON.stringify(records)); } catch (e) {}
+}
+function addWrongQuestionRecord(playerSide) {
+    if (!currentQuestionItem) return;
+    const playerNameSnapshot = playerSide === 'red' ? String(player1Name || '') : String(player2Name || '');
+    const records = getWrongBook();
+    records.push({
+        player: playerNameSnapshot, side: playerSide,
+        question: currentQuestionItem.q, img: !!currentQuestionItem.img,
+        questionIndex: deepQuestions.indexOf(currentQuestionItem) + 1,
+        answer: currentQuestionItem.a, timestamp: Date.now()
+    });
+    saveWrongBook(records);
+}
+function escapeHtml(str) {
+    return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+}
+function renderWrongBook() {
+    const container = document.getElementById('wrong-book-list');
+    const records = getWrongBook();
+    if (!records.length) { container.innerHTML = '<p>No wrong questions yet.</p>'; return; }
+    const byPlayer = new Map();
+    for (const item of records) {
+        const key = item.player != null ? String(item.player) : '';
+        if (!byPlayer.has(key)) byPlayer.set(key, []);
+        byPlayer.get(key).push(item);
+    }
+    const names = [...byPlayer.keys()].sort((a, b) => { if (a === '' && b !== '') return 1; if (b === '' && a !== '') return -1; return a.localeCompare(b, 'zh-CN'); });
+    for (const name of names) byPlayer.get(name).sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+    function renderItem(item, i) {
+        return `<div class="wrong-book-item"><div class="wrong-book-meta"><strong>#${i+1}</strong></div><div class="wrong-book-question"><b>Q${item.questionIndex||'?'}:</b> ${item.img ? '<img src="questions/'+escapeHtml(item.question)+'" style="max-width:200px;border-radius:4px;cursor:zoom-in;" onclick="zoomImage(this.src)">' : escapeHtml(item.question)}</div><div class="wrong-book-answer"><b>Answer:</b> ${escapeHtml(item.answer)}</div></div>`;
+    }
+    container.innerHTML = names.map(name => {
+        const list = byPlayer.get(name);
+        return `<section class="wrong-book-section"><div class="wrong-book-section-title">${escapeHtml(name===''?'（未命名）':name)}<span class="wrong-book-count">共 ${list.length} 题</span></div><div class="wrong-book-section-items">${list.map(renderItem).join('')}</div></section>`;
+    }).join('');
+}
+function openWrongBook() { renderWrongBook(); const o=document.getElementById('wrong-book-overlay'); o.style.display='flex'; o.setAttribute('aria-hidden','false'); }
+function closeWrongBook() { const o=document.getElementById('wrong-book-overlay'); o.style.display='none'; o.setAttribute('aria-hidden','true'); }
+function clearAllWrongBook() { if(!window.confirm('确定要清空错题本中的全部记录吗？\n此操作无法撤销。'))return; saveWrongBook([]); renderWrongBook(); }
+
+// --- Quiz State ---
+let currentPlayer = 1;
+let player1Name = '';
+let player2Name = '';
+let player1Answered = 0, player1Wrong = 0;
+let player2Answered = 0, player2Wrong = 0;
+let currentQuestionItem = null;
+let isAnswering = false;
+const RECENT_QUESTION_WINDOW = 5;
+let recentQuestionIndices = [];
+let quizStarted = false;
+const QUIZ_PROGRESS_KEY = 'as-quiz-progress';
+
+let testAllAnswersCorrect = (function() { try { return localStorage.getItem('allAnswersCorrectMode') === 'true'; } catch(e) { return false; } })();
+
+function pickRandomQuestionIndex() {
+    const n = deepQuestions.length;
+    const banned = new Set(recentQuestionIndices);
+    const candidates = [];
+    for (let i = 0; i < n; i++) { if (!banned.has(i)) candidates.push(i); }
+    const pool = candidates.length > 0 ? candidates : Array.from({ length: n }, (_, i) => i);
+    return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function updatePlayerDisplay() {
+    const label = document.getElementById('player-display');
+    label.textContent = getPlayerName(currentPlayer) + ' 的回合';
+    label.style.color = currentPlayer === 1 ? '#ff4757' : '#2e86de';
+}
+
+function updateStatsBar() {
+    const a = currentPlayer === 1 ? player1Answered : player2Answered;
+    const w = currentPlayer === 1 ? player1Wrong : player2Wrong;
+    document.getElementById('stats-answered').textContent = '作答: ' + a;
+    document.getElementById('stats-correct').textContent = '正确: ' + (a - w);
+    document.getElementById('stats-wrong').textContent = '错误: ' + w;
+}
+
+function getPlayerName(num) { return num === 1 ? player1Name : player2Name; }
+
+function winnerDisplayName(num) { const n = (num === 1 ? player1Name : player2Name).trim(); return n || (num === 1 ? '玩家 1' : '玩家 2'); }
+
+function saveQuizProgress() {
+  if (!quizStarted) return;
+  try {
+    localStorage.setItem(QUIZ_PROGRESS_KEY, JSON.stringify({
+      currentPlayer,
+      player1Answered, player1Wrong,
+      player2Answered, player2Wrong,
+      currentQuestionIndex: currentQuestionItem ? deepQuestions.indexOf(currentQuestionItem) : -1,
+      recentQuestionIndices
+    }));
+  } catch (e) {}
+}
+function clearQuizProgress() {
+  try { localStorage.removeItem(QUIZ_PROGRESS_KEY); } catch (e) {}
+}
+function loadQuizProgress() {
+  try {
+    const raw = localStorage.getItem(QUIZ_PROGRESS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
+function showMsg(t, c) { const m = document.getElementById('msg'); m.textContent = t; m.className = 'status-msg ' + c; m.style.display = 'block'; }
+
+function clearQuestionDisplay() {
+    document.getElementById('q-image').style.display = 'none';
+    document.getElementById('zoom-hint').style.display = 'none';
+}
+
+function loadNextQuestion() {
+    const idx = pickRandomQuestionIndex();
+    currentQuestionItem = deepQuestions[idx];
+    recentQuestionIndices.push(idx);
+    if (recentQuestionIndices.length > RECENT_QUESTION_WINDOW) recentQuestionIndices.shift();
+    renderCurrentQuestion();
+    isAnswering = true;
+    document.getElementById('next-btn').style.display = 'none';
+    document.getElementById('end-quiz-btn').style.display = 'block';
+    document.getElementById('msg').style.display = 'none';
+}
+
+function renderCurrentQuestion() {
+    const item = currentQuestionItem;
+    if (!item) return;
+    document.getElementById('q-text').innerHTML = item.img
+        ? `<b>Q${deepQuestions.indexOf(item)+1}：</b>`
+        : `<b>题目：</b><br>${item.q}`;
+    const qImg = document.getElementById('q-image');
+    const hint = document.getElementById('zoom-hint');
+    if (item.img) {
+        qImg.src = 'questions/' + item.q;
+        qImg.style.display = 'block';
+        if (hint) hint.style.display = 'block';
+    } else {
+        qImg.style.display = 'none';
+        if (hint) hint.style.display = 'none';
+    }
+    const opt = document.getElementById('options');
+    opt.innerHTML = '';
+    const row = document.createElement('div');
+    row.className = 'options-row';
+    ['A', 'B', 'C', 'D'].forEach(letter => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.textContent = letter;
+        btn.onclick = () => {
+            if (!isAnswering) return;
+            const qItem = currentQuestionItem;
+            const correct = testAllAnswersCorrect ? true : (letter === qItem.a);
+            // Record
+            if (currentPlayer === 1) { player1Answered++; if (!correct) player1Wrong++; }
+            else { player2Answered++; if (!correct) player2Wrong++; }
+            updateStatsBar();
+            // Disable all buttons
+            opt.querySelectorAll('.option-btn').forEach(b => b.disabled = true);
+            if (correct) {
+                showMsg("✅ 正确！", "correct");
+            } else {
+                addWrongQuestionRecord(currentPlayer === 1 ? 'red' : 'blue');
+                showMsg(`❌ 错误！正确答案是: ${qItem.a}`, 'incorrect');
+            }
+            isAnswering = false;
+            document.getElementById('next-btn').style.display = 'block';
+        };
+        row.appendChild(btn);
+    });
+    opt.appendChild(row);
+}
+
+function handleNext() {
+    currentPlayer = currentPlayer === 1 ? 2 : 1;
+    updatePlayerDisplay();
+    updateStatsBar();
+    loadNextQuestion();
+    saveQuizProgress();
+}
+
+function resetStats() { player1Answered = 0; player1Wrong = 0; player2Answered = 0; player2Wrong = 0; }
+
+// --- Result Modal ---
+function showResultModal(winnerNum) {
+    document.getElementById('winner-name').textContent = '答题结束';
+    document.getElementById('result-p1-name').textContent = '玩家 1 / ' + winnerDisplayName(1);
+    document.getElementById('result-p2-name').textContent = '玩家 2 / ' + winnerDisplayName(2);
+    document.getElementById('p1-answered').textContent = player1Answered;
+    document.getElementById('p1-wrong').textContent = player1Wrong;
+    document.getElementById('p2-answered').textContent = player2Answered;
+    document.getElementById('p2-wrong').textContent = player2Wrong;
+    const acc1 = player1Answered > 0 ? Math.round(((player1Answered - player1Wrong) / player1Answered) * 100) + '%' : '—';
+    const acc2 = player2Answered > 0 ? Math.round(((player2Answered - player2Wrong) / player2Answered) * 100) + '%' : '—';
+    document.getElementById('p1-acc-line').textContent = '正确率：' + acc1;
+    document.getElementById('p2-acc-line').textContent = '正确率：' + acc2;
+    const ro = document.getElementById('result-overlay'); ro.style.display = 'flex'; ro.setAttribute('aria-hidden', 'false');
+}
+function hideResultOverlay() { const ro = document.getElementById('result-overlay'); ro.style.display = 'none'; ro.setAttribute('aria-hidden', 'true'); }
+
+function endQuiz() {
+    isAnswering = false;
+    quizStarted = false;
+    clearQuizProgress();
+    clearQuestionDisplay();
+    document.getElementById('q-text').textContent = '等待开始...';
+    document.getElementById('options').innerHTML = '';
+    document.getElementById('msg').style.display = 'none';
+    document.getElementById('next-btn').style.display = 'none';
+    document.getElementById('end-quiz-btn').style.display = 'none';
+    resetStats();
+    recentQuestionIndices = [];
+    currentPlayer = 1;
+    updatePlayerDisplay();
+    updateStatsBar();
+}
+
+// --- Name Modal ---
+function loadSavedPlayerNames() {
+    try {
+        const s1 = localStorage.getItem('player1Name'); const s2 = localStorage.getItem('player2Name');
+        const n1 = s1 != null ? String(s1).trim() : ''; const n2 = s2 != null ? String(s2).trim() : '';
+        if (n1 && n2) { player1Name = n1; player2Name = n2; return true; }
+    } catch (e) {}
+    return false;
+}
+function prefillModalInputs() {
+    try {
+        const s1 = localStorage.getItem('player1Name'); const s2 = localStorage.getItem('player2Name');
+        const el1 = document.getElementById('red-name-input'); const el2 = document.getElementById('blue-name-input');
+        if (s1 != null && s1 !== '') el1.value = String(s1).trim();
+        if (s2 != null && s2 !== '') el2.value = String(s2).trim();
+    } catch (e) {}
+}
+function openNameModal(prefill) {
+    document.getElementById('name-modal-warning').textContent = '';
+    document.getElementById('name-modal').style.display = 'flex';
+    const el1 = document.getElementById('red-name-input'); const el2 = document.getElementById('blue-name-input');
+    if (prefill) { el1.value = player1Name || ''; el2.value = player2Name || ''; }
+    else { el1.value = ''; el2.value = ''; prefillModalInputs(); }
+}
+function nameInputTriggersAdmin(t) { return t === '/' || (t.length > 1 && t.endsWith('/')); }
+function confirmNameModal() {
+    const w = document.getElementById('name-modal-warning');
+    const n1 = document.getElementById('red-name-input').value.trim();
+    const n2 = document.getElementById('blue-name-input').value.trim();
+    if (nameInputTriggersAdmin(n1) || nameInputTriggersAdmin(n2)) { w.textContent = ''; openAdminPanel(); return; }
+    if (!n1 || !n2) { w.textContent = '请填写双方名称后再开始。'; return; }
+    w.textContent = '';
+    player1Name = n1; player2Name = n2;
+    try { localStorage.setItem('player1Name', n1); localStorage.setItem('player2Name', n2); } catch (e) {}
+    document.getElementById('name-modal').style.display = 'none';
+    startQuiz();
+}
+
+function startQuiz(fromProgress) {
+    hideResultOverlay();
+    if (!fromProgress) { resetStats(); recentQuestionIndices = []; currentPlayer = 1; }
+    quizStarted = true;
+    clearQuestionDisplay();
+    document.getElementById('msg').style.display = 'none';
+    updatePlayerDisplay();
+    updateStatsBar();
+    loadNextQuestion();
+}
+
+function restartGame() {
+    hideResultOverlay();
+    clearQuizProgress();
+    resetStats();
+    recentQuestionIndices = [];
+    currentPlayer = 1;
+    startQuiz();
+}
+
+// --- Admin ---
+function openAdminPanel() { const o = document.getElementById('admin-overlay'); o.style.display = 'flex'; o.setAttribute('aria-hidden', 'false'); }
+function closeAdminPanel() { const o = document.getElementById('admin-overlay'); o.style.display = 'none'; o.setAttribute('aria-hidden', 'true'); stripTrailingSlashFromNameInputs(); }
+function stripTrailingSlashFromNameInputs() {
+    ['red-name-input','blue-name-input'].forEach(function(id) {
+        const el = document.getElementById(id); if (!el) return;
+        const v = el.value; if (v.trim()==='/') el.value=''; else if (v.trim().endsWith('/')) el.value = v.replace(/\s*\/+\s*$/,'');
+    });
+}
+function setupNameInputAdminTrigger(input) {
+    input.addEventListener('keydown', function(e) {
+        if (e.key!=='Enter') return; const t=input.value.trim();
+        if (!nameInputTriggersAdmin(t)) return; e.preventDefault(); e.stopPropagation(); e.stopImmediatePropagation(); openAdminPanel();
+    }, true);
+}
+function updateAnswerTestToggleButton() {
+    const btn = document.getElementById('toggle-answer-test-btn');
+    btn.textContent = testAllAnswersCorrect ? 'All Answers Correct: ON' : 'All Answers Correct: OFF';
+    btn.classList.toggle('is-on', testAllAnswersCorrect);
+}
+
+// --- Event Bindings ---
+document.getElementById('next-btn').onclick = handleNext;
+document.getElementById('end-quiz-btn').onclick = endQuiz;
+document.getElementById('restart-btn').onclick = restartGame;
+document.getElementById('result-restart-btn').onclick = restartGame;
+document.getElementById('change-names-btn').onclick = function() { openNameModal(true); };
+document.getElementById('wrong-book-btn').onclick = openWrongBook;
+document.getElementById('wrong-book-clear-all').onclick = clearAllWrongBook;
+document.getElementById('wrong-book-close').onclick = closeWrongBook;
+document.getElementById('wrong-book-panel').addEventListener('click', function(e) { e.stopPropagation(); });
+document.getElementById('wrong-book-overlay').addEventListener('click', function() { closeWrongBook(); });
+document.getElementById('start-game-btn').onclick = confirmNameModal;
+document.getElementById('toggle-answer-test-btn').onclick = function() {
+    testAllAnswersCorrect = !testAllAnswersCorrect;
+    try { localStorage.setItem('allAnswersCorrectMode', String(testAllAnswersCorrect)); } catch(e) {}
+    updateAnswerTestToggleButton();
+};
+updateAnswerTestToggleButton();
+setupNameInputAdminTrigger(document.getElementById('red-name-input'));
+setupNameInputAdminTrigger(document.getElementById('blue-name-input'));
+document.getElementById('admin-panel').addEventListener('click', function(e) { e.stopPropagation(); });
+document.getElementById('admin-overlay').addEventListener('click', function() { closeAdminPanel(); });
+document.getElementById('admin-close').onclick = closeAdminPanel;
+document.addEventListener('keydown', function(e) {
+    if (e.key !== 'Escape') return;
+    const wb = document.getElementById('wrong-book-overlay'); if (wb && wb.style.display === 'flex') { closeWrongBook(); return; }
+    const ao = document.getElementById('admin-overlay'); if (ao && ao.style.display === 'flex') closeAdminPanel();
+});
+
+// --- Boot ---
+(function bootGame() {
+    if (loadSavedPlayerNames()) {
+        document.getElementById('name-modal').style.display = 'none';
+        const progress = loadQuizProgress();
+        if (progress && progress.currentQuestionIndex >= 0) {
+            currentPlayer = progress.currentPlayer;
+            player1Answered = progress.player1Answered;
+            player1Wrong = progress.player1Wrong;
+            player2Answered = progress.player2Answered;
+            player2Wrong = progress.player2Wrong;
+            currentQuestionItem = deepQuestions[progress.currentQuestionIndex] || null;
+            recentQuestionIndices = progress.recentQuestionIndices || [];
+            startQuiz(true);
+        } else {
+            updatePlayerDisplay();
+            updateStatsBar();
+        }
+    } else {
+        openNameModal(false);
+    }
+})();
+</script>
+</body>
+</html>
