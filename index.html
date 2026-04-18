@@ -178,7 +178,7 @@
             <span id="stats-wrong">错误: 0</span>
         </div>
         <button type="button" id="next-btn" class="btn-action" style="display:none;">下一题</button>
-        <button type="button" id="end-quiz-btn" class="btn-action" style="display:none;">结束答题</button>
+        <button type="button" id="end-quiz-btn" class="btn-action" style="display:none;background:#c0392b;">终止答题</button>
         <button type="button" id="restart-btn" class="btn-action" style="background:none;border:1px solid #d1d8e0;color:#999;font-size:12px;margin-top:60px;">重新开始游戏</button>
     </div>
 
@@ -354,6 +354,7 @@ let isAnswering = false;
 const RECENT_QUESTION_WINDOW = 5;
 let recentQuestionIndices = [];
 let quizStarted = false;
+const QUIZ_PROGRESS_KEY = 'as-quiz-progress';
 
 let testAllAnswersCorrect = (function() { try { return localStorage.getItem('allAnswersCorrectMode') === 'true'; } catch(e) { return false; } })();
 
@@ -383,6 +384,29 @@ function updateStatsBar() {
 function getPlayerName(num) { return num === 1 ? player1Name : player2Name; }
 
 function winnerDisplayName(num) { const n = (num === 1 ? player1Name : player2Name).trim(); return n || (num === 1 ? '玩家 1' : '玩家 2'); }
+
+function saveQuizProgress() {
+  if (!quizStarted) return;
+  try {
+    localStorage.setItem(QUIZ_PROGRESS_KEY, JSON.stringify({
+      currentPlayer,
+      player1Answered, player1Wrong,
+      player2Answered, player2Wrong,
+      currentQuestionIndex: currentQuestionItem ? deepQuestions.indexOf(currentQuestionItem) : -1,
+      recentQuestionIndices
+    }));
+  } catch (e) {}
+}
+function clearQuizProgress() {
+  try { localStorage.removeItem(QUIZ_PROGRESS_KEY); } catch (e) {}
+}
+function loadQuizProgress() {
+  try {
+    const raw = localStorage.getItem(QUIZ_PROGRESS_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
 
 function showMsg(t, c) { const m = document.getElementById('msg'); m.textContent = t; m.className = 'status-msg ' + c; m.style.display = 'block'; }
 
@@ -444,6 +468,7 @@ function renderCurrentQuestion() {
                 showMsg(`❌ 错误！正确答案是: ${qItem.a}`, 'incorrect');
             }
             isAnswering = false;
+            saveQuizProgress();
             document.getElementById('next-btn').style.display = 'block';
         };
         row.appendChild(btn);
@@ -480,13 +505,18 @@ function hideResultOverlay() { const ro = document.getElementById('result-overla
 function endQuiz() {
     isAnswering = false;
     quizStarted = false;
+    clearQuizProgress();
     clearQuestionDisplay();
-    document.getElementById('q-text').textContent = '答题已结束。';
+    document.getElementById('q-text').textContent = '等待开始...';
     document.getElementById('options').innerHTML = '';
     document.getElementById('msg').style.display = 'none';
     document.getElementById('next-btn').style.display = 'none';
     document.getElementById('end-quiz-btn').style.display = 'none';
-    showResultModal(null);
+    resetStats();
+    recentQuestionIndices = [];
+    currentPlayer = 1;
+    updatePlayerDisplay();
+    updateStatsBar();
 }
 
 // --- Name Modal ---
@@ -527,11 +557,9 @@ function confirmNameModal() {
     startQuiz();
 }
 
-function startQuiz() {
+function startQuiz(fromProgress) {
     hideResultOverlay();
-    resetStats();
-    recentQuestionIndices = [];
-    currentPlayer = 1;
+    if (!fromProgress) { resetStats(); recentQuestionIndices = []; currentPlayer = 1; }
     quizStarted = true;
     clearQuestionDisplay();
     document.getElementById('msg').style.display = 'none';
@@ -542,6 +570,7 @@ function startQuiz() {
 
 function restartGame() {
     hideResultOverlay();
+    clearQuizProgress();
     resetStats();
     recentQuestionIndices = [];
     currentPlayer = 1;
@@ -610,8 +639,20 @@ document.addEventListener('keydown', function(e) {
 (function bootGame() {
     if (loadSavedPlayerNames()) {
         document.getElementById('name-modal').style.display = 'none';
-        updatePlayerDisplay();
-        updateStatsBar();
+        const progress = loadQuizProgress();
+        if (progress && progress.currentQuestionIndex >= 0) {
+            currentPlayer = progress.currentPlayer;
+            player1Answered = progress.player1Answered;
+            player1Wrong = progress.player1Wrong;
+            player2Answered = progress.player2Answered;
+            player2Wrong = progress.player2Wrong;
+            currentQuestionItem = deepQuestions[progress.currentQuestionIndex] || null;
+            recentQuestionIndices = progress.recentQuestionIndices || [];
+            startQuiz(true);
+        } else {
+            updatePlayerDisplay();
+            updateStatsBar();
+        }
     } else {
         openNameModal(false);
     }
