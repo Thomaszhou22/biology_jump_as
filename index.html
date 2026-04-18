@@ -574,15 +574,7 @@ function restartGame() {
     resetStats();
     recentQuestionIndices = [];
     currentPlayer = 1;
-    quizStarted = false;
-    clearQuestionDisplay();
-    document.getElementById('q-text').textContent = '等待开始...';
-    document.getElementById('options').innerHTML = '';
-    document.getElementById('msg').style.display = 'none';
-    document.getElementById('next-btn').style.display = 'none';
-    document.getElementById('end-quiz-btn').style.display = 'none';
-    updatePlayerDisplay();
-    updateStatsBar();
+    startQuiz();
 }
 
 // --- Admin ---
